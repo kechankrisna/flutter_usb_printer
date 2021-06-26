@@ -1,15 +1,50 @@
 # flutter_usb_printer
 
-A new flutter plugin project.
+This plugin will allow develop send data and work with usb printer on android
 
 ## Getting Started
 
-This project is a starting point for a Flutter
-[plug-in package](https://flutter.dev/developing-packages/),
-a specialized package that includes platform-specific implementation code for
-Android and/or iOS.
+```
+    flutter pub add flutter_usb_printer
+```
 
-For help getting started with Flutter, view our
-[online documentation](https://flutter.dev/docs), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Example of Usage
 
+```
+_getDevicelist() async {
+    List<Map<String, dynamic>> results = [];
+    results = await FlutterUsbPrinter.getUSBDeviceList();
+
+    print(" length: ${results.length}");
+    setState(() {
+      devices = results;
+    });
+}
+
+_connect(int vendorId, int productId) async {
+    bool returned;
+    try {
+      returned = await flutterUsbPrinter.connect(vendorId, productId);
+    } on PlatformException {
+      //response = 'Failed to get platform version.';
+    }
+    if (returned) {
+      setState(() {
+        connected = true;
+      });
+    }
+}
+
+_print() async {
+    try {
+      var data = Uint8List.fromList(
+          utf8.encode(" Hello world Testing ESC POS printer..."));
+      await flutterUsbPrinter.write(data);
+      // await FlutterUsbPrinter.printRawData("text");
+      // await FlutterUsbPrinter.printText("Testing ESC POS printer...");
+    } on PlatformException {
+      //response = 'Failed to get platform version.';
+    }
+}
+
+```

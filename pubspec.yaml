@@ -1,7 +1,7 @@
 name: flutter_usb_printer
 description: This plugin will allow develop send data and work with usb printer on android
 version: 0.0.1
-homepage: 
+homepage: https://github.com/kechankrisna/flutter_usb_printer
 
 environment:
   sdk: ">=2.7.0 <3.0.0"
