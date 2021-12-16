@@ -33,13 +33,13 @@ class _MyAppState extends State<MyApp> {
   }
 
   _connect(int vendorId, int productId) async {
-    bool returned;
+    bool? returned = false;
     try {
       returned = await flutterUsbPrinter.connect(vendorId, productId);
     } on PlatformException {
       //response = 'Failed to get platform version.';
     }
-    if (returned) {
+    if (returned!) {
       setState(() {
         connected = true;
       });

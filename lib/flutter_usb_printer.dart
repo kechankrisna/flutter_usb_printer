@@ -29,38 +29,38 @@ class FlutterUsbPrinter {
       "vendorId": vendorId,
       "productId": productId
     };
-    final bool? returned = await _channel.invokeMethod('connect', params);
-    return returned;
+    final bool? result = await _channel.invokeMethod('connect', params);
+    return result;
   }
 
   /// [close]
   /// close the connection after print with usb printer
   Future<bool?> close() async {
-    final bool? returned = await _channel.invokeMethod('close');
-    return returned;
+    final bool? result = await _channel.invokeMethod('close');
+    return result;
   }
 
   /// [printText]
   /// print text
    Future<bool?> printText(String text) async {
     Map<String, dynamic> params = {"text": text};
-    final bool? returned = await _channel.invokeMethod('printText', params);
-    return returned;
+    final bool? result = await _channel.invokeMethod('printText', params);
+    return result;
   }
 
   /// [printRawText]
   /// print raw text
   Future<bool?> printRawText(String text) async {
     Map<String, dynamic> params = {"raw": text};
-    final bool? returned = await _channel.invokeMethod('printRawText', params);
-    return returned;
+    final bool? result = await _channel.invokeMethod('printRawText', params);
+    return result;
   }
 
   /// [write]
   /// write data byte
   Future<bool?> write(Uint8List data) async {
     Map<String, dynamic> params = {"data": data};
-    final bool? returned = await _channel.invokeMethod('write', params);
-    return returned;
+    final bool? result = await _channel.invokeMethod('write', params);
+    return result;
   }
 }
