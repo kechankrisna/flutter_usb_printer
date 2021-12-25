@@ -12,10 +12,8 @@ class FlutterUsbPrinter {
   /// get list of available usb device on android
   static Future<List<Map<String, dynamic>>> getUSBDeviceList() async {
     if (Platform.isAndroid) {
-      List devices = await (_channel.invokeMethod('getUSBDeviceList') as FutureOr<List<dynamic>>);
-      var result = List<Map>.from(devices)
-          .map((e) => Map<String, dynamic>.from(e))
-          .toList();
+      List<Map> devices = await _channel.invokeMethod('getUSBDeviceList');
+      var result = devices.map((e) => Map<String, dynamic>.from(e)).toList();
       return result;
     } else {
       return <Map<String, dynamic>>[];
@@ -42,7 +40,7 @@ class FlutterUsbPrinter {
 
   /// [printText]
   /// print text
-   Future<bool?> printText(String text) async {
+  Future<bool?> printText(String text) async {
     Map<String, dynamic> params = {"text": text};
     final bool? result = await _channel.invokeMethod('printText', params);
     return result;
