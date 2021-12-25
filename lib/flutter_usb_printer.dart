@@ -12,8 +12,12 @@ class FlutterUsbPrinter {
   /// get list of available usb device on android
   static Future<List<Map<String, dynamic>>> getUSBDeviceList() async {
     if (Platform.isAndroid) {
-      List<Map> devices = await _channel.invokeMethod('getUSBDeviceList');
-      var result = devices.map((e) => Map<String, dynamic>.from(e)).toList();
+      List<dynamic> devices = await _channel.invokeMethod('getUSBDeviceList');
+      print(devices);
+      var result = devices
+          .cast<Map<dynamic, dynamic>>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
       return result;
     } else {
       return <Map<String, dynamic>>[];
