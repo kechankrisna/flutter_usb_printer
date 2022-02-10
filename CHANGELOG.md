@@ -1,3 +1,7 @@
+## 0.1.0+1
+
+* fixed Future<dynamic>
+
 ## 0.1.0
 
 * null safety
