@@ -89,6 +89,7 @@ class USBPrinterAdapter {
             mUsbInterface = null
             mEndPoint = null
             mUsbDeviceConnection = null
+            mUsbDevice=null
         }
     }
 
