@@ -162,7 +162,7 @@ class USBPrinterAdapter {
                 }
             }
         }
-        return true
+        return false
     }
 
     fun printText(text: String): Boolean {
