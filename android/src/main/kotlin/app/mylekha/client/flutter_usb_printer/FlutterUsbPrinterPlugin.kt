@@ -13,8 +13,6 @@ import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
 
-
-
 /** FlutterUsbPrinterPlugin */
 class FlutterUsbPrinterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
   private var adapter: USBPrinterAdapter? = null
@@ -30,7 +28,7 @@ class FlutterUsbPrinterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
     channel = MethodChannel(flutterPluginBinding.binaryMessenger, "flutter_usb_printer")
     channel.setMethodCallHandler(this)
     context = flutterPluginBinding.getApplicationContext()
-    adapter = USBPrinterAdapter().getInstance()
+    adapter = USBPrinterAdapter()
   }
 
   override fun onMethodCall(@NonNull call: MethodCall, @NonNull result: Result) {
@@ -65,7 +63,6 @@ class FlutterUsbPrinterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
   }
 
   private fun getUSBDeviceList(result: Result) {
-
     val usbDevices = adapter!!.getDeviceList()
     val list = ArrayList<HashMap<String, String?>>()
     for (usbDevice in usbDevices) {
@@ -81,11 +78,11 @@ class FlutterUsbPrinterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
       }else{
         deviceMap["productName"] = "unknown";
       }
-      deviceMap["deviceId"] = Integer.toString(usbDevice.deviceId)
-      deviceMap["vendorId"] = Integer.toString(usbDevice.vendorId)
-      deviceMap["productId"] = Integer.toString(usbDevice.productId)
+      deviceMap["deviceId"] = usbDevice.deviceId.toString()
+      deviceMap["vendorId"] = usbDevice.vendorId.toString()
+      deviceMap["productId"] = usbDevice.productId.toString()
       list.add(deviceMap)
-      print("usbDevice ${usbDevice}");
+      print("usbDevice $usbDevice");
     }
     result.success(list)
   }
