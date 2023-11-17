@@ -1,5 +1,6 @@
 package app.mylekha.client.flutter_usb_printer.adapter
 
+import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -14,12 +15,27 @@ import java.nio.charset.Charset
 import java.util.*
 
 
-class USBPrinterAdapter {
+class USBPrinterAdapter private constructor(){
     companion object {
         private const val TAG = "Flutter USB Printer"
 
         private const val ACTION_USB_PERMISSION =
             "app.mylekha.client.flutter_usb_printer.USB_PERMISSION"
+
+
+        @SuppressLint("StaticFieldLeak")
+        private var mInstance: USBPrinterAdapter? = null
+
+        fun getInstance(): USBPrinterAdapter {
+            if (mInstance == null) {
+                mInstance = USBPrinterAdapter()
+            }
+            return mInstance!!
+        }
+
+        fun dispose() {
+            mInstance = null
+        }
     }
 
     private var mContext: Context? = null
