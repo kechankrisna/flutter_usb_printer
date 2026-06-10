@@ -1,3 +1,14 @@
+## 0.3.0+2
+
+### New Features
+
+* **`setChunkDelay(int ms)`**: New method to insert a configurable delay (in milliseconds) between USB bulk-transfer chunks. Increase to 20–50 ms if large payloads print intermittently on slower printers
+
+### Bug Fixes
+
+* **User-facing errors**: USB error messages (`uninitialized device`, `uninitialized manager`, permission errors) are now shown as Toasts instead of silent logcat entries
+* **Toast on uninitialized**: Toasts are now shown when `USB device is not initialized` or `USB Manager is not initialized` rather than failing silently
+
 ## 0.3.0+1
 
 ### Breaking Changes
