@@ -158,11 +158,11 @@ class USBPrinterAdapter {
 
     private fun openConnection(): Boolean {
         if (mUsbDevice == null) {
-            Log.e(LOG_TAG, "USB device is not initialized")
+            Toast.makeText(mContext, "USB device is not initialized", Toast.LENGTH_LONG).show()
             return false
         }
         if (mUSBManager == null) {
-            Log.e(LOG_TAG, "USB Manager is not initialized")
+            Toast.makeText(mContext, "USB Manager is not initialized", Toast.LENGTH_LONG).show()
             return false
         }
         if (mUsbDeviceConnection != null) {
