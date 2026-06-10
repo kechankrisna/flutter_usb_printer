@@ -1,13 +1,5 @@
 ## 0.3.0+1
 
-### Bug Fixes
-
-* **Large print jobs**: `write()`, `printText()`, and `printRawText()` now send data in 16 KB chunks instead of a single bulk transfer, eliminating JNI critical lock warnings on large payloads
-* **Transfer retry**: Bulk transfers are retried up to 3 times with increasing backoff (100ms/200ms/300ms) before failing
-* **Endpoint stall**: A USB `CLEAR_FEATURE / ENDPOINT_HALT` control transfer is sent after `claimInterface` to clear any stale stall condition on the bulk-out endpoint, fixing `-1` transfer failures on first write after fresh connection
-
-## 0.3.0
-
 ### Breaking Changes
 
 * `minSdk` raised from 16 to 24
@@ -18,6 +10,9 @@
 
 ### Bug Fixes
 
+* **Large print jobs**: `write()`, `printText()`, and `printRawText()` now send data in 16 KB chunks instead of a single bulk transfer, eliminating JNI critical lock warnings on large payloads
+* **Transfer retry**: Bulk transfers are retried up to 3 times with increasing backoff (100ms/200ms/300ms) before failing
+* **Endpoint stall**: A USB `CLEAR_FEATURE / ENDPOINT_HALT` control transfer is sent after `claimInterface` to clear any stale stall condition on the bulk-out endpoint, fixing `-1` transfer failures on first write after fresh connection
 * **Permission flow**: `connect()` now waits for the user to respond to the USB permission dialog before resolving — previously it returned `true` immediately before the user even saw the dialog
 * **Permission check**: `hasPermission()` is checked before calling `requestPermission()` — no redundant dialog when permission is already granted
 * **Connection reliability**: `openConnection()` now scans all USB interfaces (not just index 0) to find the BULK OUT endpoint, fixing printers that expose the print interface at index 1+
