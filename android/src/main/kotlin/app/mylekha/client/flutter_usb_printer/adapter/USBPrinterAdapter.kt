@@ -32,6 +32,7 @@ class USBPrinterAdapter {
 
 
     private val LOG_TAG = "Flutter USB Printer"
+    var chunkDelayMs: Long = 0L
     private var mContext: Context? = null
     private var mUSBManager: UsbManager? = null
     private var mPermissionIndent: PendingIntent? = null
@@ -224,6 +225,7 @@ class USBPrinterAdapter {
                 return false
             }
             offset += sent
+            if (chunkDelayMs > 0) Thread.sleep(chunkDelayMs)
         }
         return true
     }

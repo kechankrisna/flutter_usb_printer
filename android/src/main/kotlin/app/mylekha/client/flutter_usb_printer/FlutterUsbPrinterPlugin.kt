@@ -55,6 +55,10 @@ class FlutterUsbPrinterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
         "isConnected" -> {
           isConnected(result)
         }
+        "setChunkDelay" -> {
+          val ms = call.argument<Int>("ms")
+          setChunkDelay(ms, result)
+        }
         "printText" -> {
           val text = call.argument<String>("text")
           printText(text, result)
@@ -114,6 +118,12 @@ class FlutterUsbPrinterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
   private fun isConnected(result: Result) {
     val a = getAdapter(result) ?: return
     result.success(a.isConnected())
+  }
+
+  private fun setChunkDelay(ms: Int?, result: Result) {
+    val a = getAdapter(result) ?: return
+    a.chunkDelayMs = (ms ?: 0).toLong()
+    result.success(true)
   }
 
   private fun printText(text: String?, result: Result) {

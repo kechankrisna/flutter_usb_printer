@@ -64,6 +64,15 @@ class FlutterUsbPrinter {
     return result;
   }
 
+  /// [setChunkDelay]
+  /// set delay in milliseconds between USB bulk-transfer chunks (default 0).
+  /// increase to 20-50ms if large payloads print intermittently.
+  Future<bool?> setChunkDelay(int ms) async {
+    if (!Platform.isAndroid) return null;
+    final bool? result = await _channel.invokeMethod('setChunkDelay', {'ms': ms});
+    return result;
+  }
+
   /// [write]
   /// write data byte
   Future<bool?> write(Uint8List data) async {
