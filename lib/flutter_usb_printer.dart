@@ -41,6 +41,13 @@ class FlutterUsbPrinter {
     return result;
   }
 
+  /// [isConnected]
+  /// returns true if a USB device is selected, the connection is open, and the bulk-out endpoint is ready
+  Future<bool> isConnected() async {
+    final bool? result = await _channel.invokeMethod('isConnected');
+    return result ?? false;
+  }
+
   /// [printText]
   /// print text
   Future<bool?> printText(String text) async {

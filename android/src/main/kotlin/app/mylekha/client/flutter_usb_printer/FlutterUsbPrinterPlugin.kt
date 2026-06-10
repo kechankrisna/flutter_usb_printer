@@ -52,6 +52,9 @@ class FlutterUsbPrinterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
         "close" -> {
           close(result)
         }
+        "isConnected" -> {
+          isConnected(result)
+        }
         "printText" -> {
           val text = call.argument<String>("text")
           printText(text, result)
@@ -106,6 +109,11 @@ class FlutterUsbPrinterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
     val a = getAdapter(result) ?: return
     a.closeConnectionIfExists()
     result.success(true)
+  }
+
+  private fun isConnected(result: Result) {
+    val a = getAdapter(result) ?: return
+    result.success(a.isConnected())
   }
 
   private fun printText(text: String?, result: Result) {

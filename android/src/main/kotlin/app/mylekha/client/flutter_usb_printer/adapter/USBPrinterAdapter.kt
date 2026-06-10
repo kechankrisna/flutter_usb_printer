@@ -109,6 +109,9 @@ class USBPrinterAdapter {
     }
 
 
+    fun isConnected(): Boolean =
+        mUsbDevice != null && mUsbDeviceConnection != null && mEndPoint != null
+
     fun closeConnectionIfExists() {
         if (mUsbDeviceConnection != null) {
             mUsbDeviceConnection!!.releaseInterface(mUsbInterface)
