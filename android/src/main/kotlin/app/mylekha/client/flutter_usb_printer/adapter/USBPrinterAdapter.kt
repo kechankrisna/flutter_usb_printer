@@ -179,6 +179,15 @@ class USBPrinterAdapter {
                         mEndPoint = ep
                         mUsbInterface = usbInterface
                         mUsbDeviceConnection = usbDeviceConnection
+                        // Clear any stale HALT condition on the bulk-out endpoint
+                        usbDeviceConnection.controlTransfer(
+                            UsbConstants.USB_TYPE_STANDARD or UsbConstants.USB_DIR_OUT or 0x02, // RECIP_ENDPOINT
+                            0x01, // CLEAR_FEATURE
+                            0x00, // ENDPOINT_HALT
+                            ep.endpointNumber,
+                            null, 0, 1000
+                        )
+                        Thread.sleep(100)
                         Log.i(LOG_TAG, "USB connection opened on interface $ifaceIndex endpoint ${ep.endpointNumber}")
                         true
                     } else {
@@ -193,6 +202,27 @@ class USBPrinterAdapter {
         return false
     }
 
+    private fun bulkTransferChunked(bytes: ByteArray): Boolean {
+        val chunkSize = 16384
+        var offset = 0
+        while (offset < bytes.size) {
+            val length = minOf(chunkSize, bytes.size - offset)
+            var sent = -1
+            for (attempt in 1..3) {
+                sent = mUsbDeviceConnection!!.bulkTransfer(mEndPoint, bytes, offset, length, 100000)
+                if (sent >= 0) break
+                Log.w(LOG_TAG, "bulkTransfer attempt $attempt failed at offset $offset, retrying...")
+                Thread.sleep(100L * attempt)
+            }
+            if (sent < 0) {
+                Log.e(LOG_TAG, "bulkTransfer failed after 3 attempts at offset $offset")
+                return false
+            }
+            offset += sent
+        }
+        return true
+    }
+
     fun printText(text: String): Boolean {
         Log.v(LOG_TAG, "start to print text")
         if (!openConnection()) {
@@ -200,9 +230,7 @@ class USBPrinterAdapter {
             return false
         }
         val bytes = text.toByteArray(Charset.forName("UTF-8"))
-        val b = mUsbDeviceConnection!!.bulkTransfer(mEndPoint, bytes, bytes.size, 100000)
-        Log.i(LOG_TAG, "printText transfer status: $b")
-        return b >= 0
+        return bulkTransferChunked(bytes).also { Log.i(LOG_TAG, "printText transfer status: $it") }
     }
 
     fun printRawText(data: String): Boolean {
@@ -212,9 +240,7 @@ class USBPrinterAdapter {
             return false
         }
         val bytes = Base64.decode(data, Base64.DEFAULT)
-        val b = mUsbDeviceConnection!!.bulkTransfer(mEndPoint, bytes, bytes.size, 100000)
-        Log.i(LOG_TAG, "printRawText transfer status: $b")
-        return b >= 0
+        return bulkTransferChunked(bytes).also { Log.i(LOG_TAG, "printRawText transfer status: $it") }
     }
 
     fun write(bytes: ByteArray): Boolean {
@@ -223,8 +249,6 @@ class USBPrinterAdapter {
             Log.e(LOG_TAG, "failed to open connection for write")
             return false
         }
-        val b = mUsbDeviceConnection!!.bulkTransfer(mEndPoint, bytes, bytes.size, 100000)
-        Log.i(LOG_TAG, "write transfer status: $b")
-        return b >= 0
+        return bulkTransferChunked(bytes).also { Log.i(LOG_TAG, "write transfer status: $it") }
     }
 }
