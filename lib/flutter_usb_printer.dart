@@ -6,14 +6,13 @@ import 'package:flutter/services.dart';
 
 class FlutterUsbPrinter {
   static const MethodChannel _channel =
-      const MethodChannel('flutter_usb_printer');
+      MethodChannel('flutter_usb_printer');
 
   /// [getUSBDeviceList]
   /// get list of available usb device on android
   static Future<List<Map<String, dynamic>>> getUSBDeviceList() async {
     if (Platform.isAndroid) {
       List<dynamic> devices = await _channel.invokeMethod('getUSBDeviceList');
-      print(devices);
       var result = devices
           .cast<Map<dynamic, dynamic>>()
           .map((e) => Map<String, dynamic>.from(e))
@@ -25,7 +24,7 @@ class FlutterUsbPrinter {
   }
 
   /// [connect]
-  /// connect to a printer vai vendorId and productId
+  /// connect to a printer via vendorId and productId
   Future<bool?> connect(int vendorId, int productId) async {
     Map<String, dynamic> params = {
       "vendorId": vendorId,
