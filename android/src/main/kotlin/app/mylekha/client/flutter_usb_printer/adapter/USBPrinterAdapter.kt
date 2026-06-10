@@ -63,7 +63,7 @@ class USBPrinterAdapter {
                         )
                         mUsbDevice = usbDevice
                     } else if (!granted) {
-                        Log.w(LOG_TAG, "Permission denied for device: ${usbDevice?.deviceName ?: "unknown"}")
+                        Toast.makeText(context, "Permission denied for device: ${usbDevice?.deviceName ?: "unknown"}", Toast.LENGTH_LONG).show()
                     }
                     val cb = mPermissionCallback
                     mPermissionCallback = null
@@ -176,7 +176,7 @@ class USBPrinterAdapter {
                 if (ep.type == UsbConstants.USB_ENDPOINT_XFER_BULK && ep.direction == UsbConstants.USB_DIR_OUT) {
                     val usbDeviceConnection = mUSBManager!!.openDevice(mUsbDevice)
                     if (usbDeviceConnection == null) {
-                        Log.e(LOG_TAG, "Failed to open USB device — permission may be missing")
+                        Toast.makeText(mContext, "Failed to open USB device — permission may be missing", Toast.LENGTH_LONG).show()
                         mUsbDevice = null // stale reference; caller must re-select the device
                         return false
                     }
@@ -197,13 +197,13 @@ class USBPrinterAdapter {
                         true
                     } else {
                         usbDeviceConnection.close()
-                        Log.e(LOG_TAG, "Failed to claim USB interface $ifaceIndex")
+                        Toast.makeText(mContext, "Failed to claim USB interface $ifaceIndex", Toast.LENGTH_LONG).show()
                         false
                     }
                 }
             }
         }
-        Log.e(LOG_TAG, "No BULK OUT endpoint found on device ${mUsbDevice!!.deviceName}")
+        Toast.makeText(mContext, "No BULK OUT endpoint found on device ${mUsbDevice!!.deviceName}", Toast.LENGTH_LONG).show()
         return false
     }
 
@@ -220,7 +220,7 @@ class USBPrinterAdapter {
                 Thread.sleep(100L * attempt)
             }
             if (sent < 0) {
-                Log.e(LOG_TAG, "bulkTransfer failed after 3 attempts at offset $offset")
+                Toast.makeText(mContext, "Print failed — USB transfer error at offset $offset", Toast.LENGTH_LONG).show()
                 return false
             }
             offset += sent
