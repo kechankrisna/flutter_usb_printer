@@ -8,6 +8,10 @@
 
 * USB permission dialog is now shown automatically when a device is plugged in (via `USB_DEVICE_ATTACHED` intent-filter and `device_filter.xml`)
 
+### New Features
+
+* **`isConnected()`**: New method that returns `true` only when a device is selected, the USB connection is open, and the bulk-out endpoint is ready
+
 ### Bug Fixes
 
 * **Large print jobs**: `write()`, `printText()`, and `printRawText()` now send data in 16 KB chunks instead of a single bulk transfer, eliminating JNI critical lock warnings on large payloads
