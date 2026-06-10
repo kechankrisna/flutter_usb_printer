@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Match any USB device (class 0 = use interface class) -->
+    <usb-device />
+</resources>

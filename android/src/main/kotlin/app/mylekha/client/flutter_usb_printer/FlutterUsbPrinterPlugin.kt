@@ -12,12 +12,12 @@ import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
-
-
+import kotlinx.coroutines.*
 
 /** FlutterUsbPrinterPlugin */
 class FlutterUsbPrinterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
   private var adapter: USBPrinterAdapter? = null
+  private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
   /// The MethodChannel that will the communication between Flutter and native Android
   ///
   /// This local reference serves to register the plugin with the Flutter Engine and unregister it
@@ -26,11 +26,17 @@ class FlutterUsbPrinterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
   private lateinit var activity: Activity
   private lateinit var context: Context
 
+  private fun getAdapter(result: Result): USBPrinterAdapter? =
+      adapter ?: run {
+          result.error("NOT_INITIALIZED", "USB adapter not initialized", null)
+          null
+      }
+
   override fun onAttachedToEngine(@NonNull flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
     channel = MethodChannel(flutterPluginBinding.binaryMessenger, "flutter_usb_printer")
     channel.setMethodCallHandler(this)
     context = flutterPluginBinding.getApplicationContext()
-    adapter = USBPrinterAdapter().getInstance()
+    adapter = USBPrinterAdapter.getInstance()
   }
 
   override fun onMethodCall(@NonNull call: MethodCall, @NonNull result: Result) {
@@ -65,8 +71,8 @@ class FlutterUsbPrinterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
   }
 
   private fun getUSBDeviceList(result: Result) {
-
-    val usbDevices = adapter!!.getDeviceList()
+    val a = getAdapter(result) ?: return
+    val usbDevices = a.getDeviceList()
     val list = ArrayList<HashMap<String, String?>>()
     for (usbDevice in usbDevices) {
       val deviceMap: HashMap<String, String?> = HashMap()
@@ -85,47 +91,68 @@ class FlutterUsbPrinterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
       deviceMap["vendorId"] = Integer.toString(usbDevice.vendorId)
       deviceMap["productId"] = Integer.toString(usbDevice.productId)
       list.add(deviceMap)
-      print("usbDevice ${usbDevice}");
     }
     result.success(list)
   }
 
   private fun connect(vendorId: Int, productId: Int, result: Result) {
-    if (!adapter!!.selectDevice(vendorId!!, productId!!)) {
-      result.success(false)
-    } else {
-      result.success(true)
+    val a = getAdapter(result) ?: return
+    a.selectDevice(vendorId, productId) { granted ->
+      result.success(granted)
     }
   }
 
   private fun close(result: Result) {
-    adapter!!.closeConnectionIfExists()
+    val a = getAdapter(result) ?: return
+    a.closeConnectionIfExists()
     result.success(true)
   }
 
-  private fun printText(text : String?, result  :Result) {
-    text?.let { adapter!!.printText(it) };
-    result.success(true);
+  private fun printText(text: String?, result: Result) {
+    val a = getAdapter(result) ?: return
+    scope.launch {
+      try {
+        val success = withContext(Dispatchers.IO) { a.printText(text!!) }
+        result.success(success)
+      } catch (e: Exception) {
+        result.error("PRINT_TEXT_ERROR", e.message, null)
+      }
+    }
   }
 
   private fun printRawText(base64Data: String?, result: Result) {
-    adapter!!.printRawText(base64Data!!)
-    result.success(true)
+    val a = getAdapter(result) ?: return
+    scope.launch {
+      try {
+        val success = withContext(Dispatchers.IO) { a.printRawText(base64Data!!) }
+        result.success(success)
+      } catch (e: Exception) {
+        result.error("PRINT_RAW_TEXT_ERROR", e.message, null)
+      }
+    }
   }
 
   private fun write(bytes: ByteArray?, result: Result) {
-    bytes?.let { adapter!!.write(it) }
-    result.success(true)
+    val a = getAdapter(result) ?: return
+    scope.launch {
+      try {
+        val success = withContext(Dispatchers.IO) { a.write(bytes!!) }
+        result.success(success)
+      } catch (e: Exception) {
+        result.error("WRITE_ERROR", e.message, null)
+      }
+    }
   }
 
   override fun onDetachedFromEngine(@NonNull binding: FlutterPlugin.FlutterPluginBinding) {
     channel.setMethodCallHandler(null)
+    scope.cancel()
   }
 
   override fun onAttachedToActivity(binding: ActivityPluginBinding) {
     print("onAttachedToActivity")
     activity = binding.activity
-    adapter!!.init(activity);
+    adapter?.init(activity)
   }
 
   override fun onDetachedFromActivityForConfigChanges() {

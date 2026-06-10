@@ -4,11 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_usb_printer/flutter_usb_printer.dart';
 
-void main() => runApp(new MyApp());
+void main() => runApp(MyApp());
 
 class MyApp extends StatefulWidget {
   @override
-  _MyAppState createState() => new _MyAppState();
+  _MyAppState createState() => _MyAppState();
 }
 
 class _MyAppState extends State<MyApp> {
@@ -49,10 +49,8 @@ class _MyAppState extends State<MyApp> {
   _print() async {
     try {
       var data = Uint8List.fromList(
-          utf8.encode(" Hello world Testing ESC POS printer..."));
+          utf8.encode(" Hello world Testing ESC POS printer...\n\n\n"));
       await flutterUsbPrinter.write(data);
-      // await FlutterUsbPrinter.printRawData("text");
-      // await FlutterUsbPrinter.printText("Testing ESC POS printer...");
     } on PlatformException {
       //response = 'Failed to get platform version.';
     }
@@ -60,25 +58,25 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    return new MaterialApp(
-      home: new Scaffold(
-        appBar: new AppBar(
-          title: new Text('USB PRINTER'),
+    return MaterialApp(
+      home: Scaffold(
+        appBar: AppBar(
+          title: const Text('USB PRINTER'),
           actions: <Widget>[
-            new IconButton(
-                icon: new Icon(Icons.refresh),
+            IconButton(
+                icon: const Icon(Icons.refresh),
                 onPressed: () => _getDevicelist()),
             connected == true
-                ? new IconButton(
-                    icon: new Icon(Icons.print),
+                ? IconButton(
+                    icon: const Icon(Icons.print),
                     onPressed: () {
                       _print();
                     })
-                : new Container(),
+                : const SizedBox.shrink(),
           ],
         ),
-        body: devices.length > 0
-            ? new ListView(
+        body: devices.isNotEmpty
+            ? ListView(
                 scrollDirection: Axis.vertical,
                 children: _buildList(devices),
               )
@@ -89,16 +87,16 @@ class _MyAppState extends State<MyApp> {
 
   List<Widget> _buildList(List<Map<String, dynamic>> devices) {
     return devices
-        .map((device) => new ListTile(
+        .map((device) => ListTile(
               onTap: () {
                 _connect(int.parse(device['vendorId']),
                     int.parse(device['productId']));
               },
-              leading: new Icon(Icons.usb),
-              title: new Text(
-                  device['manufacturer'] + " " + device['productName']),
+              leading: const Icon(Icons.usb),
+              title: Text(
+                  "${device['manufacturer'] ?? ''} ${device['productName'] ?? ''}".trim()),
               subtitle:
-                  new Text(device['vendorId'] + " " + device['productId']),
+                  Text("${device['vendorId'] ?? ''} ${device['productId'] ?? ''}".trim()),
             ))
         .toList();
   }
