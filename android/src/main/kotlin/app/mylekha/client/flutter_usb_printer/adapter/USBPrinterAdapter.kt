@@ -74,6 +74,7 @@ class USBPrinterAdapter {
                     Toast.makeText(context, "USB device has been turned off", Toast.LENGTH_LONG)
                         .show()
                     closeConnectionIfExists()
+                    mUsbDevice = null // device node is gone; force re-select on next connect
                 }
             }
         }
@@ -173,6 +174,7 @@ class USBPrinterAdapter {
                     val usbDeviceConnection = mUSBManager!!.openDevice(mUsbDevice)
                     if (usbDeviceConnection == null) {
                         Log.e(LOG_TAG, "Failed to open USB device — permission may be missing")
+                        mUsbDevice = null // stale reference; caller must re-select the device
                         return false
                     }
                     return if (usbDeviceConnection.claimInterface(usbInterface, true)) {
