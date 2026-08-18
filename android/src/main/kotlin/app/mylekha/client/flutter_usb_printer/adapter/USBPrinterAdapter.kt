@@ -16,6 +16,14 @@ import android.util.Base64
 import android.util.Log
 import android.widget.Toast
 import java.nio.charset.Charset
+import kotlin.coroutines.resume
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 
 class USBPrinterAdapter {
@@ -40,6 +48,16 @@ class USBPrinterAdapter {
     private var mUsbDeviceConnection: UsbDeviceConnection? = null
     private var mUsbInterface: UsbInterface? = null
     private var mEndPoint: UsbEndpoint? = null
+    private var receiverRegistered = false
+
+    /// serializes every operation that touches mUsbDevice/mUsbDeviceConnection so
+    /// that concurrent print jobs (e.g. split-ticket printing to multiple
+    /// printers via Future.wait) can't steal/close each other's connection mid-transfer
+    private val mutex = Mutex()
+
+    /// outlives the Flutter engine/plugin lifecycle so device-detach cleanup
+    /// can still run even if the engine is mid-teardown
+    private val adapterScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     private val ACTION_USB_PERMISSION = "app.mylekha.client.flutter_usb_printer.USB_PERMISSION"
 
@@ -74,8 +92,10 @@ class USBPrinterAdapter {
                 if (mUsbDevice != null) {
                     Toast.makeText(context, "USB device has been turned off", Toast.LENGTH_LONG)
                         .show()
-                    closeConnectionIfExists()
                     mUsbDevice = null // device node is gone; force re-select on next connect
+                    // route through the mutex so we don't close a connection that
+                    // another coroutine is mid-transfer on
+                    adapterScope.launch { mutex.withLock { closeConnectionIfExists() } }
                 }
             }
         }
@@ -99,6 +119,12 @@ class USBPrinterAdapter {
                 0
             )
         }
+        // guard against re-registering on every onAttachedToActivity (e.g. rotation,
+        // config change) which used to leak a receiver instance per reattach
+        if (receiverRegistered) {
+            Log.v(LOG_TAG, "USB Printer re-initialized (receiver already registered)")
+            return
+        }
         val filter = IntentFilter(ACTION_USB_PERMISSION)
         filter.addAction(UsbManager.ACTION_USB_DEVICE_DETACHED)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -106,7 +132,18 @@ class USBPrinterAdapter {
         } else {
             mContext!!.registerReceiver(mUsbDeviceReceiver, filter)
         }
+        receiverRegistered = true
         Log.v(LOG_TAG, "USB Printer initialized")
+    }
+
+    fun teardown() {
+        if (!receiverRegistered) return
+        try {
+            mContext?.unregisterReceiver(mUsbDeviceReceiver)
+        } catch (e: Exception) {
+            Log.w(LOG_TAG, "unregisterReceiver failed: ${e.message}")
+        }
+        receiverRegistered = false
     }
 
 
@@ -155,6 +192,25 @@ class USBPrinterAdapter {
         }
         mPermissionCallback = onResult
         mUSBManager!!.requestPermission(usbDevice, mPermissionIndent)
+    }
+
+    private suspend fun selectDeviceSuspend(vendorId: Int, productId: Int): Boolean =
+        suspendCancellableCoroutine { cont ->
+            selectDevice(vendorId, productId) { granted ->
+                if (cont.isActive) cont.resume(granted)
+            }
+        }
+
+    /// mutex-guarded device selection, used by the plain "connect" channel call
+    /// (e.g. test-connect / discovery UI flows) so it can't race with an
+    /// in-flight sendData/write on a different job
+    suspend fun connectDevice(vendorId: Int, productId: Int): Boolean = mutex.withLock {
+        selectDeviceSuspend(vendorId, productId)
+    }
+
+    suspend fun closeConnection(): Boolean = mutex.withLock {
+        closeConnectionIfExists()
+        true
     }
 
     private fun openConnection(): Boolean {
@@ -210,12 +266,17 @@ class USBPrinterAdapter {
 
     private fun bulkTransferChunked(bytes: ByteArray): Boolean {
         val chunkSize = 16384
+        // a healthy printer accepts a chunk in well under a second; this is a ceiling,
+        // not an expected wait. Was previously 100000ms x 3 attempts (~5 min worst case
+        // per write) which made a single offline/stalled printer look "frozen".
+        val transferTimeoutMs = 6000
+        val maxAttempts = 2
         var offset = 0
         while (offset < bytes.size) {
             val length = minOf(chunkSize, bytes.size - offset)
             var sent = -1
-            for (attempt in 1..3) {
-                sent = mUsbDeviceConnection!!.bulkTransfer(mEndPoint, bytes, offset, length, 100000)
+            for (attempt in 1..maxAttempts) {
+                sent = mUsbDeviceConnection!!.bulkTransfer(mEndPoint, bytes, offset, length, transferTimeoutMs)
                 if (sent >= 0) break
                 Log.w(LOG_TAG, "bulkTransfer attempt $attempt failed at offset $offset, retrying...")
                 Thread.sleep(100L * attempt)
@@ -230,32 +291,49 @@ class USBPrinterAdapter {
         return true
     }
 
-    fun printText(text: String): Boolean {
+    suspend fun printText(text: String): Boolean = mutex.withLock {
         Log.v(LOG_TAG, "start to print text")
         if (!openConnection()) {
             Log.e(LOG_TAG, "failed to open connection for printText")
-            return false
+            return@withLock false
         }
         val bytes = text.toByteArray(Charset.forName("UTF-8"))
-        return bulkTransferChunked(bytes).also { Log.i(LOG_TAG, "printText transfer status: $it") }
+        bulkTransferChunked(bytes).also { Log.i(LOG_TAG, "printText transfer status: $it") }
     }
 
-    fun printRawText(data: String): Boolean {
+    suspend fun printRawText(data: String): Boolean = mutex.withLock {
         Log.v(LOG_TAG, "start to print raw text")
         if (!openConnection()) {
             Log.e(LOG_TAG, "failed to open connection for printRawText")
-            return false
+            return@withLock false
         }
         val bytes = Base64.decode(data, Base64.DEFAULT)
-        return bulkTransferChunked(bytes).also { Log.i(LOG_TAG, "printRawText transfer status: $it") }
+        bulkTransferChunked(bytes).also { Log.i(LOG_TAG, "printRawText transfer status: $it") }
     }
 
-    fun write(bytes: ByteArray): Boolean {
+    suspend fun write(bytes: ByteArray): Boolean = mutex.withLock {
         Log.v(LOG_TAG, "start to write ${bytes.size} bytes")
         if (!openConnection()) {
             Log.e(LOG_TAG, "failed to open connection for write")
-            return false
+            return@withLock false
         }
-        return bulkTransferChunked(bytes).also { Log.i(LOG_TAG, "write transfer status: $it") }
+        bulkTransferChunked(bytes).also { Log.i(LOG_TAG, "write transfer status: $it") }
+    }
+
+    /// atomically select the device (requesting permission if needed), open/reuse
+    /// its connection, and write in one locked step — closes the connect-then-write
+    /// race window that existed when Dart called connect() and write() as two
+    /// separate, independently-interleavable method channel calls
+    suspend fun sendData(vendorId: Int, productId: Int, bytes: ByteArray): Boolean = mutex.withLock {
+        Log.v(LOG_TAG, "sendData: start for vendor=$vendorId product=$productId, ${bytes.size} bytes")
+        if (!selectDeviceSuspend(vendorId, productId)) {
+            Log.e(LOG_TAG, "sendData: device selection/permission failed")
+            return@withLock false
+        }
+        if (!openConnection()) {
+            Log.e(LOG_TAG, "sendData: failed to open connection")
+            return@withLock false
+        }
+        bulkTransferChunked(bytes).also { Log.i(LOG_TAG, "sendData transfer status: $it") }
     }
 }

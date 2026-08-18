@@ -49,6 +49,12 @@ class FlutterUsbPrinterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
           val productId = call.argument<Int>("productId")
           connect(vendorId!!, productId!!, result)
         }
+        "sendData" -> {
+          val vendorId = call.argument<Int>("vendorId")
+          val productId = call.argument<Int>("productId")
+          val data = call.argument<ByteArray>("data")
+          sendData(vendorId!!, productId!!, data!!, result)
+        }
         "close" -> {
           close(result)
         }
@@ -104,15 +110,38 @@ class FlutterUsbPrinterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
 
   private fun connect(vendorId: Int, productId: Int, result: Result) {
     val a = getAdapter(result) ?: return
-    a.selectDevice(vendorId, productId) { granted ->
-      result.success(granted)
+    scope.launch {
+      try {
+        val granted = withContext(Dispatchers.IO) { a.connectDevice(vendorId, productId) }
+        result.success(granted)
+      } catch (e: Exception) {
+        result.error("CONNECT_ERROR", e.message, null)
+      }
+    }
+  }
+
+  private fun sendData(vendorId: Int, productId: Int, bytes: ByteArray, result: Result) {
+    val a = getAdapter(result) ?: return
+    scope.launch {
+      try {
+        val success = withContext(Dispatchers.IO) { a.sendData(vendorId, productId, bytes) }
+        result.success(success)
+      } catch (e: Exception) {
+        result.error("SEND_DATA_ERROR", e.message, null)
+      }
     }
   }
 
   private fun close(result: Result) {
     val a = getAdapter(result) ?: return
-    a.closeConnectionIfExists()
-    result.success(true)
+    scope.launch {
+      try {
+        val success = withContext(Dispatchers.IO) { a.closeConnection() }
+        result.success(success)
+      } catch (e: Exception) {
+        result.error("CLOSE_ERROR", e.message, null)
+      }
+    }
   }
 
   private fun isConnected(result: Result) {
@@ -164,6 +193,7 @@ class FlutterUsbPrinterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
 
   override fun onDetachedFromEngine(@NonNull binding: FlutterPlugin.FlutterPluginBinding) {
     channel.setMethodCallHandler(null)
+    adapter?.teardown()
     scope.cancel()
   }
 

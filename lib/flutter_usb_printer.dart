@@ -80,4 +80,21 @@ class FlutterUsbPrinter {
     final bool? result = await _channel.invokeMethod('write', params);
     return result;
   }
+
+  /// [sendData]
+  /// atomically select the device (by vendorId/productId, requesting
+  /// permission if needed) and write the data in a single native call,
+  /// reusing an already-open connection when possible. Prefer this over
+  /// separate `connect()` + `write()` calls for actual printing, since two
+  /// separate method channel calls leave a window where a concurrent print
+  /// job can steal the underlying USB connection in between.
+  Future<bool?> sendData(int vendorId, int productId, Uint8List data) async {
+    Map<String, dynamic> params = {
+      "vendorId": vendorId,
+      "productId": productId,
+      "data": data,
+    };
+    final bool? result = await _channel.invokeMethod('sendData', params);
+    return result;
+  }
 }
