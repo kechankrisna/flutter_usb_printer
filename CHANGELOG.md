@@ -1,3 +1,15 @@
+## 0.3.2
+
+### New Features
+
+* **`sendData(vendorId, productId, data)`**: New method that selects the device and writes to it in a single native call, reusing an already-open connection when possible. Prefer this over separate `connect()` + `write()` calls for actual printing — two separate method-channel calls left a window where a concurrent print job could steal the underlying USB connection in between
+
+### Bug Fixes
+
+* **Concurrent print jobs**: All device I/O (`connect`, `write`, `printText`, `printRawText`, `sendData`, `close`) is now serialized behind a mutex, so concurrent print jobs (e.g. split-ticket printing to multiple printers via `Future.wait`) can no longer steal or close each other's connection mid-transfer
+* **Receiver leak**: The USB broadcast receiver is no longer re-registered on every `onAttachedToActivity` (e.g. rotation, config change); it registers once and is unregistered on engine detach
+* **Frozen-printer UX**: Bulk-transfer timeout reduced from 100s × 3 attempts (~5 min worst case) to 6s × 2 attempts, so an offline or stalled printer fails fast instead of appearing frozen
+
 ## 0.3.1
 
 ### New Features
