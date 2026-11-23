@@ -1,3 +1,9 @@
+## Unreleased
+
+### Bug Fixes
+
+* **Android build on AGP 9 / Kotlin 2.4:** `android/build.gradle.kts` now configures the typed `LibraryExtension` and `kotlin { compilerOptions }` instead of the `android {}` and `kotlinOptions {}` accessors, and drops the redundant `java.srcDirs` line (Kotlin picks up `src/main/kotlin` by default). Apps on AGP 9 failed with "Script compilation errors"; AGP 8 apps still build.
+
 ## 0.3.2
 
 ### New Features
